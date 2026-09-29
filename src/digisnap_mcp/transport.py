@@ -7,7 +7,7 @@ import logging
 import time
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
-from urllib.request import Request
+from urllib.request import ProxyHandler, Request, build_opener
 from typing import Any, Callable
 
 logger = logging.getLogger("digisnap_mcp.transport")
@@ -24,7 +24,7 @@ class TransportError(Exception):
         return self.message
 
 
-def request_json(
+def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:\n    """Build a urllib opener with optional HTTP(S) proxy routing."""\n    if not proxy_url:\n        return build_opener().open\n    return build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url})).open\n\n\ndef request_json(
     opener: Callable[..., Any],
     request: Request,
     *,
