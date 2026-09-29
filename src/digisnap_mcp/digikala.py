@@ -14,8 +14,6 @@ from urllib.request import Request, urlopen
 
 from .transport import TransportError, request_json
 
-from .transport import TransportError, request_json
-
 from .adapters import StoreAdapter
 from .errors import AdapterError, ProductNotFoundError, RateLimitError
 from .models import Offer, Product, Seller, Specification, Store
