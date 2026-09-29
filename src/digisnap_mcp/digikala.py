@@ -14,11 +14,14 @@ from urllib.request import Request, urlopen
 
 from .transport import TransportError, request_json
 
+from .transport import TransportError, request_json
+
 from .adapters import StoreAdapter
 from .errors import AdapterError, ProductNotFoundError, RateLimitError
 from .models import Offer, Product, Seller, Specification, Store
 
 DIGIKALA_STORE = Store("digikala", "Digikala")
+logger = logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 
 
@@ -41,13 +44,7 @@ class DigikalaAdapter(StoreAdapter):
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-        request = Request(
-            url,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": "DigiSnap-MCP/0.6",
-            },
-        )
+        request = Request(url, headers={"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"})
         try:
             return request_json(self._opener, request, timeout=self.timeout)
         except TransportError as exc:
