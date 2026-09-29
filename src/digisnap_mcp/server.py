@@ -1,5 +1,7 @@
 """MCP server entry point and provider-neutral tool registration."""
 
+import os
+
 from mcp.server.fastmcp import FastMCP
 
 from .adapters import AdapterRegistry
@@ -275,6 +277,14 @@ def analyze_offers(
     ]
 
 def main() -> None:
+    transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
+    if transport in {"streamable-http", "http"}:
+        mcp.run(
+            transport="streamable-http",
+            host=os.getenv("MCP_HOST", "0.0.0.0"),
+            port=int(os.getenv("PORT", os.getenv("MCP_PORT", "8000"))),
+        )
+        return
     mcp.run()
 
 
