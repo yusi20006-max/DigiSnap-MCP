@@ -39,12 +39,63 @@ def _product_dict(product) -> dict:
         "model": product.model,
         "variant": product.variant,
         "url": product.url,
-        "specifications": [
-            {"name": spec.name, "value": spec.value}
-            for spec in product.specifications
-        ],
+        "specifications": [{"name": spec.name, "value": spec.value} for spec in product.specifications],
         "offers": [_offer_dict(offer) for offer in product.offers],
         "metadata": product.metadata,
+    }
+
+
+def _comparison_dict(result) -> dict:
+    lowest = result.lowest_price_offer
+    return {
+        "products": [
+            {"id": p.id, "store": p.store.id, "title": p.title, "url": p.url}
+            for p in result.products
+        ],
+        "matched": all(match.matched for match in result.matches) if result.matches else False,
+        "matches": [
+            {
+                "left_id": match.left.id,
+                "right_id": match.right.id,
+                "score": str(match.score),
+                "matched": match.matched,
+                "reasons": list(match.reasons),
+            }
+            for match in result.matches
+        ],
+        "lowest_price_offer": (
+            {
+                "store": lowest.store.id,
+                "offer_id": lowest.id,
+                "seller": lowest.seller.name if lowest.seller else None,
+                "price": str(lowest.price),
+                "currency": lowest.currency,
+                "warranty": lowest.warranty,
+                "available": lowest.available,
+                "url": lowest.url,
+            }
+            if lowest
+            else None
+        ),
+        "price_delta": (
+            {
+                "absolute": str(result.price_delta.absolute),
+                "percentage": str(result.price_delta.percentage) if result.price_delta.percentage is not None else None,
+                "currency": lowest.currency if lowest else None,
+            }
+            if result.price_delta
+            else None
+        ),
+        "specification_differences": (
+            [
+                ComparisonEngine.specification_differences(result.products[0], result.products[1])
+                if len(result.products) == 2
+                else ()
+            ][0]
+            if len(result.products) == 2
+            else ()
+        ),
+        "offers": [_offer_dict(offer) for offer in result.offers],
     }
 
 
@@ -78,29 +129,53 @@ def get_snappshop_product(product_id: str) -> dict:
     return _product_dict(registry.get("snappshop").get_product(product_id))
 
 
-@mcp.tool()
-def compare_prices(product_ids: list[str], store_ids: list[str]) -> dict:
-    """Compare normalized products supplied by registered store adapters."""
+def _get_products(product_ids: list[str], store_ids: list[str]):
     if len(product_ids) != len(store_ids):
         raise ValueError("product_ids and store_ids must have the same length")
-    products = [
+    if not product_ids:
+        raise ValueError("at least one product is required")
+    return tuple(
         registry.get(store_id).get_product(product_id)
         for product_id, store_id in zip(product_ids, store_ids)
-    ]
+    )
+
+
+@mcp.tool()
+def compare_products(product_ids: list[str], store_ids: list[str]) -> dict:
+    """Compare products across stores, including identity, variants, specs and offers."""
+    products = _get_products(product_ids, store_ids)
+    return _comparison_dict(comparison.compare(products))
+
+
+@mcp.tool()
+def compare_offers(product_ids: list[str], store_ids: list[str]) -> dict:
+    """Compare normalized offers across the supplied store products."""
+    products = _get_products(product_ids, store_ids)
     result = comparison.compare(products)
     return {
-        "products": [{"id": p.id, "store": p.store.id, "title": p.title} for p in result.products],
-        "lowest_price": ({
-            "store": result.lowest_price_offer.store.id,
-            "seller": result.lowest_price_offer.seller.name if result.lowest_price_offer.seller else None,
-            "price": str(result.lowest_price_offer.price),
-            "currency": result.lowest_price_offer.currency,
-        } if result.lowest_price_offer else None),
-        "price_delta": ({
-            "absolute": str(result.price_delta.absolute),
-            "percentage": str(result.price_delta.percentage) if result.price_delta.percentage is not None else None,
-        } if result.price_delta else None),
+        "matched": all(match.matched for match in result.matches) if result.matches else False,
+        "offers": [_offer_dict(offer) for offer in result.offers],
+        "lowest_price_offer": (
+            _offer_dict(result.lowest_price_offer)
+            if result.lowest_price_offer
+            else None
+        ),
+        "price_delta": (
+            {
+                "absolute": str(result.price_delta.absolute),
+                "percentage": str(result.price_delta.percentage) if result.price_delta.percentage is not None else None,
+                "currency": result.lowest_price_offer.currency if result.lowest_price_offer else None,
+            }
+            if result.price_delta
+            else None
+        ),
     }
+
+
+@mcp.tool()
+def compare_prices(product_ids: list[str], store_ids: list[str]) -> dict:
+    """Backward-compatible price comparison using the canonical comparison engine."""
+    return compare_offers(product_ids, store_ids)
 
 
 def main() -> None:
