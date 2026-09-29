@@ -59,7 +59,13 @@ class SnappShopAdapter(StoreAdapter):
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-        headers = {"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"}
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json" if payload is not None else "application/json",
+            "User-Agent": "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140.0.0.0 Mobile Safari/537.36",
+            "Origin": "https://snappshop.ir",
+            "Referer": "https://snappshop.ir/",
+        }
         data = None
         if payload is not None:
             data = json.dumps(payload).encode("utf-8")
