@@ -7,8 +7,12 @@ import logging
 import time
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
+from urllib.parse import unquote, urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
 from typing import Any, Callable
+
+import socks
+from sockshandler import SocksiPyHandler
 
 logger = logging.getLogger("digisnap_mcp.transport")
 
@@ -25,10 +29,35 @@ class TransportError(Exception):
 
 
 def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:
-    """Build a urllib opener with optional HTTP(S) proxy routing."""
+    """Build an opener with optional HTTP(S) or SOCKS5 upstream routing."""
     if not proxy_url:
         return build_opener().open
-    return build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url})).open
+
+    parsed = urlsplit(proxy_url)
+    if parsed.scheme in {"socks5", "socks5h"}:
+        if not parsed.hostname:
+            raise ValueError("SOCKS5 proxy URL must include a host")
+        port = parsed.port or 1080
+        username = unquote(parsed.username) if parsed.username else None
+        password = unquote(parsed.password) if parsed.password else None
+        handler = SocksiPyHandler(
+            socks.SOCKS5,
+            parsed.hostname,
+            port,
+            rdns=parsed.scheme == "socks5h",
+            username=username,
+            password=password,
+        )
+        return build_opener(handler).open
+
+    if parsed.scheme in {"http", "https"}:
+        return build_opener(
+            ProxyHandler({"http": proxy_url, "https": proxy_url})
+        ).open
+
+    raise ValueError(
+        "unsupported upstream proxy scheme; use http://, https://, socks5://, or socks5h://"
+    )
 
 
 def request_json(
