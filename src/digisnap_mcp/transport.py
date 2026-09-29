@@ -18,6 +18,7 @@ class TransportError(Exception):
     message: str
     status: int | None = None
     retryable: bool = False
+    location: str | None = None
 
     def __str__(self) -> str:
         return self.message
@@ -54,7 +55,7 @@ def request_json(
         except HTTPError as exc:
             retryable = exc.code == 429 or exc.code >= 500
             if not retryable or attempt == attempts - 1:
-                raise TransportError(f"HTTP {exc.code}", status=exc.code, retryable=retryable) from exc
+                raise TransportError(f"HTTP {exc.code}", status=exc.code, retryable=retryable, location=exc.headers.get("Location")) from exc
             logger.warning("transient HTTP error; retry=%s status=%s", attempt + 1, exc.code)
         except (URLError, TimeoutError, OSError) as exc:
             if attempt == attempts - 1:
