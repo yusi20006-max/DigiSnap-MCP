@@ -1,5 +1,3 @@
-import json
-from io import BytesIO
 from urllib.error import URLError
 from urllib.request import Request
 
