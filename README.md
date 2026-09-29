@@ -4,7 +4,7 @@ MCP server for comparing products, prices, sellers, availability and specificati
 
 ## Status
 
-**Phase 5 — Shopping Intelligence implemented.**
+**Phase 6 — Production Hardening, CI & Release implemented.**
 
 ## Registered tools
 
@@ -68,6 +68,16 @@ The Digikala web API is also undocumented and may change. Provider-specific HTTP
 
 Prices are preserved as returned by the upstream payload and currently represented as `IRR` in the canonical model. No implicit 10x Toman/Rial conversion is performed.
 
+## Production hardening
+
+Phase 6 adds bounded retries for transient upstream failures, structured adapter error logging, reproducible CI checks, dependency auditing, compile/import smoke checks, contribution and security documentation, and an MCP client configuration example.
+
+- Retries are limited and use exponential backoff; non-transient errors are not retried.
+- Upstream response bodies, headers, cookies and credentials are not logged.
+- `429` remains a rate-limit signal; `404` remains a not-found signal for SnappShop.
+- CI runs Python 3.11–3.13 tests, Ruff linting, coverage reporting, compilation and smoke import checks, plus `pip-audit`.
+- The package is released under the MIT License.
+
 ## Development
 
 Requires Python 3.11+.
@@ -92,7 +102,7 @@ The server currently uses MCP stdio transport.
 3. SnappShop Adapter — complete
 4. Cross-Store Product & Offer Comparison — complete
 5. Shopping Intelligence — complete
-6. Production Hardening, CI & Release
+6. Production Hardening, CI & Release — complete
 
 ## Design principles
 
@@ -101,3 +111,11 @@ The server currently uses MCP stdio transport.
 - Missing upstream data is represented as unknown, never invented.
 - Product variants remain explicit.
 - External-store behavior is isolated behind adapter boundaries.
+
+## MCP client configuration
+
+See `examples/mcp-client.json` for a minimal stdio configuration.
+
+## Release
+
+Releases use semantic version tags such as `v0.6.0`. The release candidate must pass the complete CI matrix and dependency audit before tagging.
