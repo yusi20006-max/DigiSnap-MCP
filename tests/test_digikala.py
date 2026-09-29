@@ -24,22 +24,24 @@ def opener_for(payload, status=200, seen=None):
         if seen is not None:
             seen.append(request.full_url)
         return FakeResponse(payload, status)
+
     return opener
 
 
 def test_search_normalizes_product_and_seller():
-    adapter = DigikalaAdapter(base_url="https://example.test", opener=opener_for({
+    seen = []
+    payload = {
         "data": {"products": [{
             "id": 123, "title": "Galaxy A56", "brand": {"title": "Samsung"},
             "url": "https://www.digikala.com/product/dkp-123/",
             "offers": [{"id": 7, "selling_price": 25000000, "available": True,
                         "seller": {"id": 9, "name": "Seller A", "rating": 4.7}}]
         }]}
-    }))
-    seen = []
-    adapter = DigikalaAdapter(base_url="https://example.test", opener=opener_for({
-        "data": {"products": [{"id": 123, "title": "Galaxy A56"}]}
-    }, seen=seen))
+    }
+    adapter = DigikalaAdapter(
+        base_url="https://example.test",
+        opener=opener_for(payload, seen=seen),
+    )
     result = adapter.search("Galaxy A56")
     assert seen[0] == "https://example.test/v3/search/?q=Galaxy+A56&page=1"
     assert result[0].id == "123"
@@ -49,14 +51,15 @@ def test_search_normalizes_product_and_seller():
 
 
 def test_product_normalizes_specs_and_direct_price():
-    adapter = DigikalaAdapter(base_url="https://example.test", opener=opener_for({
+    seen = []
+    payload = {
         "data": {"product": {"id": 123, "title": "Test", "price": 1000,
                              "specifications": [{"name": "RAM", "value": "8 GB"}]}}
-    }))
-    seen = []
-    adapter = DigikalaAdapter(base_url="https://example.test", opener=opener_for({
-        "data": {"product": {"id": 123, "title": "Test", "price": 1000}}
-    }, seen=seen))
+    }
+    adapter = DigikalaAdapter(
+        base_url="https://example.test",
+        opener=opener_for(payload, seen=seen),
+    )
     result = adapter.get_product("123")
     assert seen[0] == "https://example.test/v2/product/123/"
     assert result.specifications[0].name == "RAM"
