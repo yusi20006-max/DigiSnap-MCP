@@ -3,6 +3,8 @@
 import os
 
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from .adapters import AdapterRegistry
 from .comparison import ComparisonEngine
@@ -17,6 +19,12 @@ registry.register(DigikalaAdapter())
 registry.register(SnappShopAdapter())
 comparison = ComparisonEngine()
 settings = Settings.from_env()
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    """Return a lightweight health response for deployment probes."""
+    return JSONResponse({"status": "healthy", "service": "DigiSnap-MCP"})
 
 
 def _offer_dict(offer) -> dict:
@@ -183,7 +191,6 @@ def compare_prices(product_ids: list[str], store_ids: list[str]) -> dict:
     return compare_offers(product_ids, store_ids)
 
 
-
 def _shopping_policy(
     *,
     require_available: bool = True,
@@ -275,6 +282,7 @@ def analyze_offers(
         }
         for offer in offers
     ]
+
 
 def main() -> None:
     transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
