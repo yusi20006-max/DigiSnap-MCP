@@ -11,7 +11,7 @@ from .comparison import ComparisonEngine
 from .intelligence import ShoppingIntelligence, ShoppingPolicy
 from .config import Settings
 from .digikala import DigikalaAdapter
-from .snappshop import SnappShopAdapter
+from .snappshop import SnappShopAdapter\nfrom .transport import build_http_opener
 
 mcp = FastMCP(
     "DigiSnap-MCP",
