@@ -20,7 +20,6 @@ from .models import Offer, Product, Seller, Specification, Store
 
 DIGIKALA_STORE = Store("digikala", "Digikala")
 logger = logging.getLogger(__name__)
-logger = logging.getLogger(__name__)
 
 
 class DigikalaAdapter(StoreAdapter):
@@ -46,8 +45,6 @@ class DigikalaAdapter(StoreAdapter):
         request = Request(url, headers=headers)
         try:
             return request_json(self._opener, request, timeout=self.timeout)
-except TransportError as exc:
-            raise
         except TransportError as exc:
             logger.error("Digikala request failed path=%s status=%s", path, exc.status)
             if exc.status == 429:
