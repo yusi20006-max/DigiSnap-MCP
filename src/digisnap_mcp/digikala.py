@@ -6,17 +6,21 @@ is isolated in this module so the core comparison layer stays stable.
 
 from __future__ import annotations
 
-import json
+import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+
+from .transport import TransportError, request_json
 
 from .adapters import StoreAdapter
 from .errors import AdapterError, ProductNotFoundError, RateLimitError
 from .models import Offer, Product, Seller, Specification, Store
 
 DIGIKALA_STORE = Store("digikala", "Digikala")
+logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class DigikalaAdapter(StoreAdapter):
@@ -38,26 +42,13 @@ class DigikalaAdapter(StoreAdapter):
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-        request = Request(
-            url,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": "DigiSnap-MCP/0.1 (+https://github.com/yusi20006-max/DigiSnap-MCP)",
-            },
-        )
+        request = Request(url, headers={"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"})
         try:
-            with self._opener(request, timeout=self.timeout) as response:
-                status = getattr(response, "status", 200)
-                if status == 429:
-                    raise RateLimitError("Digikala rate limit exceeded")
-                if status >= 400:
-                    raise AdapterError(f"Digikala returned HTTP {status}")
-                return json.loads(response.read().decode("utf-8"))
-        except RateLimitError:
-            raise
-        except AdapterError:
-            raise
-        except Exception as exc:
+            return request_json(self._opener, request, timeout=self.timeout)
+        except TransportError as exc:
+            logger.error("Digikala request failed path=%s status=%s", path, exc.status)
+            if exc.status == 429:
+                raise RateLimitError("Digikala rate limit exceeded") from exc
             raise AdapterError(f"Digikala request failed: {exc}") from exc
 
     @staticmethod
