@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "digisnap-mcp"
-version = "0.4.0"
+version = "0.5.0"
 description = "MCP server for comparing products across Digikala and SnappShop."
 readme = "README.md"
 requires-python = ">=3.11"
