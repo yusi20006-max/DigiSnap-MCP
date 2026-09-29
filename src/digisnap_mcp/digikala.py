@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 from .transport import TransportError, request_json
@@ -42,9 +42,20 @@ class DigikalaAdapter(StoreAdapter):
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-        request = Request(url, headers={"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"})
+        headers = {"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"}
+        request = Request(url, headers=headers)
         try:
             return request_json(self._opener, request, timeout=self.timeout)
+        except TransportError as exc:
+            if exc.status in {301, 302, 303, 307, 308}:
+                location = getattr(exc, "location", None)
+                if location:
+                    target = urljoin(url, location)
+                    parsed_base = urlparse(self.base_url)
+                    parsed_target = urlparse(target)
+                    if parsed_target.scheme == parsed_base.scheme and parsed_target.netloc == parsed_base.netloc:
+                        return request_json(self._opener, Request(target, headers=headers), timeout=self.timeout)
+            raise
         except TransportError as exc:
             logger.error("Digikala request failed path=%s status=%s", path, exc.status)
             if exc.status == 429:
