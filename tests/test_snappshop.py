@@ -21,8 +21,10 @@ class FakeResponse:
         return False
 
 
-def opener_factory(payload, status=200):
+def opener_factory(payload, status=200, seen=None):
     def opener(request, timeout):
+        if seen is not None:
+            seen.append((request.full_url, request.get_header("User-agent"), request.get_header("Origin")))
         return FakeResponse(payload, status)
 
     return opener
@@ -43,7 +45,10 @@ def test_search_normalizes_snappshop_cards():
             }]
         }
     }
-    product = SnappShopAdapter(opener=opener_factory(payload)).search("Galaxy", limit=1)[0]
+    seen = []
+    product = SnappShopAdapter(opener=opener_factory(payload, seen=seen)).search("Galaxy", limit=1)[0]
+    assert seen[0][0] == "https://apix.snappshop.ir/search/v1?lat=35.77331&lng=51.418591"
+    assert seen[0][2] == "https://snappshop.ir"
     assert product.id == "42yeLw"
     assert product.store.id == "snappshop"
     assert product.offers[0].price == 33980000
