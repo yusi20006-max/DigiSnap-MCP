@@ -6,12 +6,46 @@ from .adapters import AdapterRegistry
 from .comparison import ComparisonEngine
 from .config import Settings
 from .digikala import DigikalaAdapter
+from .snappshop import SnappShopAdapter
 
 mcp = FastMCP("DigiSnap-MCP")
 registry = AdapterRegistry()
 registry.register(DigikalaAdapter())
+registry.register(SnappShopAdapter())
 comparison = ComparisonEngine()
 settings = Settings.from_env()
+
+
+def _offer_dict(offer) -> dict:
+    return {
+        "id": offer.id,
+        "price": str(offer.price) if offer.price is not None else None,
+        "currency": offer.currency,
+        "available": offer.available,
+        "seller": offer.seller.name if offer.seller else None,
+        "seller_id": offer.seller.id if offer.seller else None,
+        "warranty": offer.warranty,
+        "condition": offer.condition,
+        "url": offer.url,
+    }
+
+
+def _product_dict(product) -> dict:
+    return {
+        "id": product.id,
+        "title": product.title,
+        "store": product.store.id,
+        "brand": product.brand,
+        "model": product.model,
+        "variant": product.variant,
+        "url": product.url,
+        "specifications": [
+            {"name": spec.name, "value": spec.value}
+            for spec in product.specifications
+        ],
+        "offers": [_offer_dict(offer) for offer in product.offers],
+        "metadata": product.metadata,
+    }
 
 
 @mcp.tool()
@@ -23,33 +57,25 @@ def list_stores() -> list[str]:
 @mcp.tool()
 def search_digikala(query: str, limit: int = 10) -> list[dict]:
     """Search Digikala and return normalized products."""
-    products = registry.get("digikala").search(query, limit=limit)
-    return [{
-        "id": p.id, "title": p.title, "brand": p.brand, "model": p.model,
-        "variant": p.variant, "url": p.url,
-        "offers": [{
-            "id": o.id, "price": str(o.price) if o.price is not None else None,
-            "currency": o.currency, "available": o.available,
-            "seller": o.seller.name if o.seller else None, "url": o.url,
-        } for o in p.offers],
-    } for p in products]
+    return [_product_dict(p) for p in registry.get("digikala").search(query, limit=limit)]
 
 
 @mcp.tool()
 def get_digikala_product(product_id: str) -> dict:
     """Get one normalized Digikala product."""
-    p = registry.get("digikala").get_product(product_id)
-    return {
-        "id": p.id, "title": p.title, "brand": p.brand, "model": p.model,
-        "variant": p.variant, "url": p.url,
-        "specifications": [{"name": s.name, "value": s.value} for s in p.specifications],
-        "offers": [{
-            "id": o.id, "price": str(o.price) if o.price is not None else None,
-            "currency": o.currency, "available": o.available,
-            "seller": o.seller.name if o.seller else None,
-            "warranty": o.warranty, "condition": o.condition, "url": o.url,
-        } for o in p.offers],
-    }
+    return _product_dict(registry.get("digikala").get_product(product_id))
+
+
+@mcp.tool()
+def search_snappshop(query: str, limit: int = 10) -> list[dict]:
+    """Search SnappShop and return normalized products."""
+    return [_product_dict(p) for p in registry.get("snappshop").search(query, limit=limit)]
+
+
+@mcp.tool()
+def get_snappshop_product(product_id: str) -> dict:
+    """Get one normalized SnappShop product with variants and offers."""
+    return _product_dict(registry.get("snappshop").get_product(product_id))
 
 
 @mcp.tool()
