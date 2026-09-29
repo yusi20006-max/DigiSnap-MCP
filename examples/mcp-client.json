@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "digisnap": {
+      "command": "digisnap-mcp"
+    }
+  }
+}
