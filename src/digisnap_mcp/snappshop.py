@@ -204,6 +204,7 @@ class SnappShopAdapter(StoreAdapter):
             url=product_url,
             warranty=warranty,
             condition="new",
+            regular_price=regular,
         )
 
     @classmethod
