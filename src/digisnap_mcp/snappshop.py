@@ -7,16 +7,20 @@ and parsing stay isolated here so the canonical domain remains stable.
 from __future__ import annotations
 
 import json
+import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any, Callable
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+from .transport import TransportError, request_json
 
 from .adapters import StoreAdapter
 from .errors import AdapterError, ProductNotFoundError, RateLimitError
 from .models import Offer, Product, Seller, Specification, Store
 
 SNAPPSHOP_STORE = Store("snappshop", "SnappShop")
+logger = logging.getLogger(__name__)
 
 
 class SnappShopAdapter(StoreAdapter):
@@ -55,34 +59,20 @@ class SnappShopAdapter(StoreAdapter):
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-
-        headers = {
-            "Accept": "application/json",
-            "User-Agent": "DigiSnap-MCP/0.3",
-        }
+        headers = {"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"}
         data = None
         if payload is not None:
             data = json.dumps(payload).encode("utf-8")
             headers["Content-Type"] = "application/json"
-
         request = Request(url, data=data, headers=headers, method=method.upper())
         try:
-            with self._opener(request, timeout=self.timeout) as response:
-                status = getattr(response, "status", 200)
-                if status == 429:
-                    raise RateLimitError("SnappShop rate limit exceeded")
-                if status >= 400:
-                    if status == 404:
-                        raise ProductNotFoundError("SnappShop resource not found")
-                    raise AdapterError(f"SnappShop returned HTTP {status}")
-                body = response.read().decode("utf-8")
-                result = json.loads(body)
-                if not isinstance(result, dict):
-                    raise AdapterError("SnappShop returned a non-object JSON payload")
-                return result
-        except (RateLimitError, ProductNotFoundError, AdapterError):
-            raise
-        except Exception as exc:
+            return request_json(self._opener, request, timeout=self.timeout)
+        except TransportError as exc:
+            logger.error("SnappShop request failed path=%s status=%s", path, exc.status)
+            if exc.status == 404:
+                raise ProductNotFoundError("SnappShop resource not found") from exc
+            if exc.status == 429:
+                raise RateLimitError("SnappShop rate limit exceeded") from exc
             raise AdapterError(f"SnappShop request failed: {exc}") from exc
 
     @staticmethod
