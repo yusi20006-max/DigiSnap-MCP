@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, phase-1-core]
+    branches: [main, phase-1-core, phase-5-shopping-intelligence]
   pull_request:
     branches: [main]
 
