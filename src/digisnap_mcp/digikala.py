@@ -42,9 +42,12 @@ class DigikalaAdapter(StoreAdapter):
         url = f"{self.base_url}{path}"
         if params:
             url = f"{url}?{urlencode(params)}"
-        request = Request(url, headers={"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"})
+        headers = {"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"}
+        request = Request(url, headers=headers)
         try:
             return request_json(self._opener, request, timeout=self.timeout)
+except TransportError as exc:
+            raise
         except TransportError as exc:
             logger.error("Digikala request failed path=%s status=%s", path, exc.status)
             if exc.status == 429:
@@ -193,7 +196,7 @@ class DigikalaAdapter(StoreAdapter):
         if not query.strip():
             raise ValueError("query cannot be empty")
         limit = max(1, min(limit, 100))
-        payload = self._request_json("/v1/search/", {"q": query, "page": 1})
+        payload = self._request_json("/v3/search/", {"q": query, "page": 1})
         products = tuple(self._product(item) for item in self._items(payload))
         return products[:limit]
 
@@ -201,7 +204,7 @@ class DigikalaAdapter(StoreAdapter):
         if not str(product_id).strip():
             raise ValueError("product_id cannot be empty")
         encoded = quote(str(product_id).strip(), safe="")
-        payload = self._request_json(f"/v1/product/{encoded}/")
+        payload = self._request_json(f"/v2/product/{encoded}/")
         try:
             data = payload.get("data") or payload
             raw = data.get("product") if isinstance(data, dict) else None
