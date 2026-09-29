@@ -291,11 +291,7 @@ def analyze_offers(
 def main() -> None:
     transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
     if transport in {"streamable-http", "http"}:
-        mcp.run(
-            transport="streamable-http",
-            host=os.getenv("MCP_HOST", "0.0.0.0"),
-            port=int(os.getenv("PORT", os.getenv("MCP_PORT", "8000"))),
-        )
+        mcp.run(transport="streamable-http")
         return
     mcp.run()
 
