@@ -13,7 +13,11 @@ from .config import Settings
 from .digikala import DigikalaAdapter
 from .snappshop import SnappShopAdapter
 
-mcp = FastMCP("DigiSnap-MCP")
+mcp = FastMCP(
+    "DigiSnap-MCP",
+    host=os.getenv("FASTMCP_HOST", "0.0.0.0"),
+    port=int(os.getenv("PORT", os.getenv("FASTMCP_PORT", os.getenv("MCP_PORT", "8000")))),
+)
 registry = AdapterRegistry()
 registry.register(DigikalaAdapter())
 registry.register(SnappShopAdapter())
