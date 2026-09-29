@@ -4,29 +4,17 @@ MCP server for comparing products, prices, sellers, availability and specificati
 
 ## Status
 
-Phase 1 — Core MCP Server & Architecture is implemented.
+**Phase 2 — Digikala Adapter implemented.**
 
-## Core architecture
+## Digikala tools
 
-```
-Store Adapter(s)
-      |
-      v
-Canonical Product / Offer / Seller models
-      |
-      v
-Comparison Engine
-      |
-      v
-MCP Tools
-```
+- `search_digikala` — search products and return normalized results
+- `get_digikala_product` — fetch one product and normalize specifications/offers
+- `list_stores` — currently reports `digikala`
 
-The comparison layer is provider-neutral. Digikala and SnappShop integrations will be implemented as independent adapters in later phases.
-
-## Current MCP tools
-
-- `list_stores`
-- `compare_prices`
+The Digikala web API is undocumented and may change. Provider-specific HTTP,
+endpoint paths and payload parsing are isolated in the adapter. HTTP failures
+and rate limits use explicit domain errors.
 
 ## Development
 
@@ -37,7 +25,7 @@ python -m pip install -e ".[dev]"
 pytest
 ```
 
-Run the MCP server:
+Run:
 
 ```bash
 digisnap-mcp
@@ -47,8 +35,8 @@ The server currently uses MCP stdio transport.
 
 ## Roadmap
 
-1. Core MCP Server & Architecture
-2. Digikala Adapter
+1. Core MCP Server & Architecture — complete
+2. Digikala Adapter — complete
 3. SnappShop Adapter
 4. Cross-Store Product & Offer Comparison
 5. Shopping Intelligence
@@ -60,4 +48,4 @@ The server currently uses MCP stdio transport.
 - Comparison operates only on normalized domain models.
 - Missing upstream data is represented as unknown, never invented.
 - Product variants remain explicit.
-- External-store behavior is treated as unstable and isolated behind adapter boundaries.
+- External-store behavior is isolated behind adapter boundaries.
