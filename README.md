@@ -4,7 +4,7 @@ MCP server for comparing products, prices, sellers, availability and specificati
 
 ## Status
 
-**Phase 6 — Production Hardening, CI & Release implemented.**
+**Phase 7 — Remote Streamable HTTP transport for Grok implemented.**
 
 ## Registered tools
 
@@ -19,6 +19,26 @@ MCP server for comparing products, prices, sellers, availability and specificati
 - `find_best_price` — lowest observed comparable offer with explicit filters
 - `find_best_value` — policy-driven offer selection with explainable reasons
 - `analyze_offers` — expose observed price, discount, seller, warranty and availability signals
+
+## Remote MCP / Grok
+
+For local development the server keeps **stdio** as the default transport.
+
+For a remote deployment, set:
+
+```text
+MCP_TRANSPORT=http
+```
+
+The Streamable HTTP MCP endpoint is exposed at:
+
+```text
+https://<public-host>/mcp
+```
+
+A lightweight `GET /health` endpoint is provided for deployment health checks.
+
+xAI Grok supports external MCP servers over Streaming HTTP and SSE. A public HTTPS MCP URL can be registered as a Custom MCP connector.
 
 ## Cross-store comparison
 
@@ -93,8 +113,6 @@ Run:
 digisnap-mcp
 ```
 
-The server currently uses MCP stdio transport.
-
 ## Roadmap
 
 1. Core MCP Server & Architecture — complete
@@ -103,6 +121,7 @@ The server currently uses MCP stdio transport.
 4. Cross-Store Product & Offer Comparison — complete
 5. Shopping Intelligence — complete
 6. Production Hardening, CI & Release — complete
+7. Remote Streamable HTTP transport for Grok — complete
 
 ## Design principles
 
