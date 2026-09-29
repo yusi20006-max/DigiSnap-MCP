@@ -24,7 +24,14 @@ class TransportError(Exception):
         return self.message
 
 
-def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:\n    """Build a urllib opener with optional HTTP(S) proxy routing."""\n    if not proxy_url:\n        return build_opener().open\n    return build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url})).open\n\n\ndef request_json(
+def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:
+    """Build a urllib opener with optional HTTP(S) proxy routing."""
+    if not proxy_url:
+        return build_opener().open
+    return build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url})).open
+
+
+def request_json(
     opener: Callable[..., Any],
     request: Request,
     *,
@@ -55,7 +62,12 @@ def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:\n    
         except HTTPError as exc:
             retryable = exc.code == 429 or exc.code >= 500
             if not retryable or attempt == attempts - 1:
-                raise TransportError(f"HTTP {exc.code}", status=exc.code, retryable=retryable, location=exc.headers.get("Location")) from exc
+                raise TransportError(
+                    f"HTTP {exc.code}",
+                    status=exc.code,
+                    retryable=retryable,
+                    location=exc.headers.get("Location"),
+                ) from exc
             logger.warning("transient HTTP error; retry=%s status=%s", attempt + 1, exc.code)
         except (URLError, TimeoutError, OSError) as exc:
             if attempt == attempts - 1:
