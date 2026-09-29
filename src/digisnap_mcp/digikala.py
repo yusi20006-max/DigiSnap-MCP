@@ -99,6 +99,7 @@ class DigikalaAdapter(StoreAdapter):
             url=cls._first(raw, "url", "product_url") or product_url,
             warranty=cls._warranty(raw),
             condition=cls._first(raw, "condition", "product_condition"),
+            regular_price=cls._price(cls._first(raw, "original_price", "old_price", "rrp", "regular_price")),
         )
 
     @staticmethod

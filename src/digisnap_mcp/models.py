@@ -35,6 +35,24 @@ class Offer:
     url: str | None = None
     warranty: str | None = None
     condition: str | None = None
+    regular_price: Decimal | None = None
+
+    @property
+    def discount_percentage(self) -> Decimal | None:
+        if self.regular_price is None or self.price is None or self.regular_price <= 0:
+            return None
+        if self.price >= self.regular_price:
+            return Decimal("0")
+        return (self.regular_price - self.price) / self.regular_price * Decimal("100")
+    regular_price: Decimal | None = None
+
+    @property
+    def discount_percentage(self) -> Decimal | None:
+        if self.regular_price is None or self.price is None or self.regular_price <= 0:
+            return None
+        if self.price >= self.regular_price:
+            return Decimal("0")
+        return (self.regular_price - self.price) / self.regular_price * Decimal("100")
 
 
 @dataclass(frozen=True)

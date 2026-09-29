@@ -204,6 +204,7 @@ class SnappShopAdapter(StoreAdapter):
             url=product_url,
             warranty=warranty,
             condition="new",
+            regular_price=regular,
         )
 
     @classmethod
@@ -328,6 +329,7 @@ class SnappShopAdapter(StoreAdapter):
             available=price is not None,
             url=url,
             condition="new",
+            regular_price=regular,
         )
         return Product(
             id=str(product_id),

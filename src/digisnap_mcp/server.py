@@ -4,6 +4,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .adapters import AdapterRegistry
 from .comparison import ComparisonEngine
+from .intelligence import ShoppingIntelligence, ShoppingPolicy
 from .config import Settings
 from .digikala import DigikalaAdapter
 from .snappshop import SnappShopAdapter
@@ -26,6 +27,8 @@ def _offer_dict(offer) -> dict:
         "seller_id": offer.seller.id if offer.seller else None,
         "warranty": offer.warranty,
         "condition": offer.condition,
+        "regular_price": str(offer.regular_price) if offer.regular_price is not None else None,
+        "discount_percentage": str(offer.discount_percentage) if offer.discount_percentage is not None else None,
         "url": offer.url,
     }
 
@@ -177,6 +180,99 @@ def compare_prices(product_ids: list[str], store_ids: list[str]) -> dict:
     """Backward-compatible price comparison using the canonical comparison engine."""
     return compare_offers(product_ids, store_ids)
 
+
+
+def _shopping_policy(
+    *,
+    require_available: bool = True,
+    require_warranty: bool = False,
+    minimum_seller_rating: float | None = None,
+    seller_ids: list[str] | None = None,
+    preferred_stores: list[str] | None = None,
+    priority: list[str] | None = None,
+) -> ShoppingPolicy:
+    return ShoppingPolicy(
+        require_available=require_available,
+        require_warranty=require_warranty,
+        minimum_seller_rating=minimum_seller_rating,
+        seller_ids=frozenset(seller_ids or ()),
+        preferred_stores=tuple(preferred_stores or ()),
+        priority=tuple(priority or ("price", "availability", "warranty", "seller_rating")),
+    )
+
+
+@mcp.tool()
+def find_best_price(
+    product_ids: list[str],
+    store_ids: list[str],
+    require_available: bool = True,
+    require_warranty: bool = False,
+    minimum_seller_rating: float | None = None,
+    seller_ids: list[str] | None = None,
+) -> dict:
+    """Find the lowest comparable observed offer under explicit filters."""
+    products = _get_products(product_ids, store_ids)
+    policy = _shopping_policy(
+        require_available=require_available,
+        require_warranty=require_warranty,
+        minimum_seller_rating=minimum_seller_rating,
+        seller_ids=seller_ids,
+    )
+    offers = [offer for product in products for offer in product.offers]
+    selected = ShoppingIntelligence.best_price(offers, policy)
+    return {
+        "found": selected is not None,
+        "offer": _offer_dict(selected) if selected else None,
+        "selection": "lowest_observed_price",
+        "currency_safe": selected is not None,
+    }
+
+
+@mcp.tool()
+def find_best_value(
+    product_ids: list[str],
+    store_ids: list[str],
+    priority: list[str] | None = None,
+    require_available: bool = True,
+    require_warranty: bool = False,
+    minimum_seller_rating: float | None = None,
+    seller_ids: list[str] | None = None,
+) -> dict:
+    """Select an offer using an explicit, ordered policy rather than a hidden score."""
+    products = _get_products(product_ids, store_ids)
+    policy = _shopping_policy(
+        require_available=require_available,
+        require_warranty=require_warranty,
+        minimum_seller_rating=minimum_seller_rating,
+        seller_ids=seller_ids,
+        priority=priority,
+    )
+    offers = [offer for product in products for offer in product.offers]
+    analysis = ShoppingIntelligence.best_value(offers, policy)
+    return {
+        "found": analysis is not None,
+        "offer": _offer_dict(analysis.offer) if analysis else None,
+        "discount_percentage": str(analysis.discount_percentage) if analysis and analysis.discount_percentage is not None else None,
+        "reasons": list(analysis.reasons) if analysis else [],
+        "priority": list(policy.priority),
+    }
+
+
+@mcp.tool()
+def analyze_offers(
+    product_ids: list[str],
+    store_ids: list[str],
+) -> list[dict]:
+    """Expose observed discount, availability, warranty and seller signals without ranking."""
+    products = _get_products(product_ids, store_ids)
+    offers = [offer for product in products for offer in product.offers]
+    return [
+        {
+            **_offer_dict(offer),
+            "reasons": list(ShoppingIntelligence.analyze_offer(offer).reasons),
+        }
+        for offer in offers
+    ]
 
 def main() -> None:
     mcp.run()
