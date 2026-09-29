@@ -6,7 +6,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from http.client import HTTPResponse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request
 from typing import Any, Callable
