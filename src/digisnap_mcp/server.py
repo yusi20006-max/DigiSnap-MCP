@@ -11,7 +11,8 @@ from .comparison import ComparisonEngine
 from .intelligence import ShoppingIntelligence, ShoppingPolicy
 from .config import Settings
 from .digikala import DigikalaAdapter
-from .snappshop import SnappShopAdapter\nfrom .transport import build_http_opener
+from .snappshop import SnappShopAdapter
+from .transport import build_http_opener
 
 mcp = FastMCP(
     "DigiSnap-MCP",
@@ -19,8 +20,10 @@ mcp = FastMCP(
     port=int(os.getenv("PORT", os.getenv("FASTMCP_PORT", os.getenv("MCP_PORT", "8000")))),
 )
 registry = AdapterRegistry()
-registry.register(DigikalaAdapter())
-registry.register(SnappShopAdapter())
+upstream_proxy = os.getenv("UPSTREAM_HTTP_PROXY")
+upstream_opener = build_http_opener(upstream_proxy)
+registry.register(DigikalaAdapter(opener=upstream_opener))
+registry.register(SnappShopAdapter(opener=upstream_opener))
 comparison = ComparisonEngine()
 settings = Settings.from_env()
 
