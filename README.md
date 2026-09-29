@@ -4,7 +4,7 @@ MCP server for comparing products, prices, sellers, availability and specificati
 
 ## Status
 
-**Phase 4 — Cross-Store Product & Offer Comparison implemented.**
+**Phase 5 — Shopping Intelligence implemented.**
 
 ## Registered tools
 
@@ -16,6 +16,9 @@ MCP server for comparing products, prices, sellers, availability and specificati
 - `compare_products` — identity, variant, specification and offer comparison
 - `compare_offers` — normalized offer and price comparison
 - `compare_prices` — backward-compatible price comparison
+- `find_best_price` — lowest observed comparable offer with explicit filters
+- `find_best_value` — policy-driven offer selection with explainable reasons
+- `analyze_offers` — expose observed price, discount, seller, warranty and availability signals
 
 ## Cross-store comparison
 
@@ -36,6 +39,17 @@ The comparison layer provides:
 - missing values remain unknown rather than being inferred
 
 A match is a comparison signal, not an assertion of identity. Consumers can inspect `matched`, `score` and `reasons` before using a cross-store result.
+
+## Shopping intelligence
+
+Phase 5 adds provider-neutral intelligence on canonical offers. It does not invent prices, availability or specifications.
+
+- `find_best_price` filters normalized offers and compares only offers with the same currency.
+- Seller IDs, minimum seller rating, warranty and availability can be explicit filters.
+- `find_best_value` uses an ordered policy such as `price`, `availability`, `warranty`, `seller_rating` or `discount`; there is no hidden composite score.
+- Discount percentages are calculated only when both current and observed regular prices are present.
+- `PriceObservation` / `PriceHistoryProvider` define an optional historical-price contract without requiring a storage backend.
+- `StockMonitorHook` defines an optional application hook for stock monitoring.
 
 ## Provider adapters
 
@@ -77,7 +91,7 @@ The server currently uses MCP stdio transport.
 2. Digikala Adapter — complete
 3. SnappShop Adapter — complete
 4. Cross-Store Product & Offer Comparison — complete
-5. Shopping Intelligence
+5. Shopping Intelligence — complete
 6. Production Hardening, CI & Release
 
 ## Design principles
