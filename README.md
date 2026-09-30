@@ -98,6 +98,10 @@ Phase 6 adds bounded retries for transient upstream failures, structured adapter
 - CI runs Python 3.11–3.13 tests, Ruff linting, coverage reporting, compilation and smoke import checks, plus `pip-audit`.
 - The package is released under the MIT License.
 
+## Upstream resilience
+
+Phase 8.4 adds provider-specific pacing, bounded retry/backoff, upstream response classification, short-lived successful GET caching, and cookie persistence for bounded Digikala challenge retries. See `docs/upstream-resilience.md`.
+
 ## Development
 
 Requires Python 3.11+.
