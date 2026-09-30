@@ -13,7 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from .transport import RequestPacer, TransportError, request_json
+from .transport import RequestPacer, ResponseCache, TransportError, request_json
 
 from .adapters import StoreAdapter
 from .errors import AdapterError, ProductNotFoundError, RateLimitError
@@ -22,6 +22,7 @@ from .models import Offer, Product, Seller, Specification, Store
 SNAPPSHOP_STORE = Store("snappshop", "SnappShop")
 logger = logging.getLogger(__name__)
 _SNAPPSHOP_PACER = RequestPacer(0.5)
+_SNAPPSHOP_CACHE = ResponseCache(ttl=30.0, max_entries=128)
 
 
 class SnappShopAdapter(StoreAdapter):
@@ -73,7 +74,7 @@ class SnappShopAdapter(StoreAdapter):
             headers["Content-Type"] = "application/json"
         request = Request(url, data=data, headers=headers, method=method.upper())
         try:
-            return request_json(self._opener, request, timeout=self.timeout, pace=_SNAPPSHOP_PACER)
+            return request_json(self._opener, request, timeout=self.timeout, pace=_SNAPPSHOP_PACER, cache=_SNAPPSHOP_CACHE)
         except TransportError as exc:
             logger.error("SnappShop request failed path=%s status=%s", path, exc.status)
             if exc.status == 404:
