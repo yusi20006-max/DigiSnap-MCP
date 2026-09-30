@@ -13,7 +13,7 @@ def test_build_http_opener_direct_mode(monkeypatch):
     monkeypatch.setattr(transport, "build_opener", fake_build_opener)
     opener = transport.build_http_opener()
     assert callable(opener)
-    assert captured["handlers"] == ()
+    assert len(captured["handlers"]) == 2
 
 
 def test_build_http_opener_http_proxy_mode(monkeypatch):
@@ -26,6 +26,8 @@ def test_build_http_opener_http_proxy_mode(monkeypatch):
     monkeypatch.setattr(transport, "build_opener", fake_build_opener)
     opener = transport.build_http_opener("http://proxy.example.test:8080")
     assert callable(opener)
+    cookie_handlers = [handler for handler in captured["handlers"] if isinstance(handler, transport.HTTPCookieProcessor)]
+    assert cookie_handlers
     proxy_handlers = [
         handler for handler in captured["handlers"] if isinstance(handler, ProxyHandler)
     ]
@@ -62,8 +64,8 @@ def test_build_http_opener_socks5h_mode(monkeypatch):
         "username": "user",
         "password": "pass",
     }
-    assert len(captured["handlers"]) == 1
-    assert isinstance(captured["handlers"][0], FakeSocksiPyHandler)
+    assert any(isinstance(handler, FakeSocksiPyHandler) for handler in captured["handlers"])
+    assert any(isinstance(handler, transport.HTTPCookieProcessor) for handler in captured["handlers"])
 
 
 def test_build_http_opener_socks5_mode_uses_local_dns(monkeypatch):
