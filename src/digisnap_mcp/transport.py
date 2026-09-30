@@ -173,7 +173,7 @@ def request_json(
     timeout: float,
     retries: int = 2,
     backoff: float = 0.25,
-    cache: ResponseCache | None = _DEFAULT_CACHE,
+    cache: ResponseCache | None = None,
     pace: RequestPacer | None = _DEFAULT_PACER,
 ) -> dict[str, Any]:
     """Fetch JSON with bounded retries, pacing, challenge handling and safe caching."""
@@ -194,9 +194,9 @@ def request_json(
                         f"HTTP {status} ({category})",
                         status=status,
                         retryable=retryable,
-                        location=response.headers.get("Location"),
+                        location=getattr(response, "headers", {}).get("Location"),
                         category=category,
-                        retry_after=_retry_after(response.headers),
+                        retry_after=_retry_after(getattr(response, "headers", {})),
                     )
                 raw = response.read()
                 try:
