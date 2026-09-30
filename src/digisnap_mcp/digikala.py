@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
-from .transport import RequestPacer, TransportError, request_json
+from .transport import RequestPacer, ResponseCache, TransportError, request_json
 
 from .adapters import StoreAdapter
 from .errors import AdapterError, ProductNotFoundError, RateLimitError
@@ -21,6 +21,7 @@ from .models import Offer, Product, Seller, Specification, Store
 DIGIKALA_STORE = Store("digikala", "Digikala")
 logger = logging.getLogger(__name__)
 _DIGIKALA_PACER = RequestPacer(0.5)
+_DIGIKALA_CACHE = ResponseCache(ttl=30.0, max_entries=128)
 
 
 class DigikalaAdapter(StoreAdapter):
@@ -45,7 +46,7 @@ class DigikalaAdapter(StoreAdapter):
         headers = {"Accept": "application/json", "User-Agent": "DigiSnap-MCP/0.6"}
         request = Request(url, headers=headers)
         try:
-            return request_json(self._opener, request, timeout=self.timeout, pace=_DIGIKALA_PACER)
+            return request_json(self._opener, request, timeout=self.timeout, pace=_DIGIKALA_PACER, cache=_DIGIKALA_CACHE)
         except TransportError as exc:
             logger.error("Digikala request failed path=%s status=%s", path, exc.status)
             if exc.status == 429:
