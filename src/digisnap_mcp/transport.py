@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import logging
@@ -18,6 +19,7 @@ from urllib.request import (
     ProxyHandler,
     Request,
     build_opener,
+    urlopen,
 )
 
 import socks
@@ -107,6 +109,103 @@ class RequestPacer:
             self._last[host] = now
 
 
+class _GatewayHeaders(dict):
+    """Minimal case-insensitive header mapping for the gateway response shim."""
+
+    def get(self, key: str, default: Any = None) -> Any:
+        wanted = key.lower()
+        for name, value in self.items():
+            if name.lower() == wanted:
+                return value
+        return default
+
+
+class _GatewayResponse:
+    """Adapt the restricted egress-gateway envelope to the urllib response shape."""
+
+    def __init__(self, *, status: int, headers: dict[str, str], body: bytes) -> None:
+        self.status = status
+        self.code = status
+        self.headers = _GatewayHeaders(headers)
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> "_GatewayResponse":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+
+class GatewayOpener:
+    """Route provider requests through an authenticated restricted HTTP gateway."""
+
+    def __init__(self, gateway_url: str, token: str, *, timeout: float = 20.0) -> None:
+        self.gateway_url = gateway_url.rstrip("/")
+        self.token = token
+        self.timeout = timeout
+
+    def __call__(self, request: Request, timeout: float | None = None) -> _GatewayResponse:
+        body = request.data or b""
+        payload = {
+            "method": request.get_method(),
+            "url": request.full_url,
+            "headers": {
+                name: value
+                for name, value in request.header_items()
+                if name.lower() not in {"host", "content-length", "authorization"}
+            },
+            "body_base64": base64.b64encode(body).decode("ascii") if body else None,
+        }
+        gateway_request = Request(
+            f"{self.gateway_url}/v1/fetch",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.token}",
+            },
+            method="POST",
+        )
+        with urlopen(gateway_request, timeout=timeout or self.timeout) as response:
+            envelope = json.loads(response.read().decode("utf-8"))
+
+        if not isinstance(envelope, dict):
+            raise TransportError("egress gateway returned an invalid response envelope", category="gateway_error")
+
+        status = envelope.get("status")
+        headers = envelope.get("headers") or {}
+        body_base64 = envelope.get("body_base64")
+        if not isinstance(status, int) or not isinstance(headers, dict):
+            raise TransportError("egress gateway returned malformed response metadata", category="gateway_error")
+        try:
+            body_bytes = base64.b64decode(body_base64 or "", validate=True)
+        except Exception as exc:
+            raise TransportError("egress gateway returned invalid body encoding", category="gateway_error") from exc
+
+        return _GatewayResponse(
+            status=status,
+            headers={str(key): str(value) for key, value in headers.items()},
+            body=body_bytes,
+        )
+
+
+def build_gateway_opener(
+    gateway_url: str,
+    token: str,
+    *,
+    timeout: float = 20.0,
+) -> Callable[..., Any]:
+    """Build an authenticated opener for the operator-controlled egress gateway."""
+    if not gateway_url.strip():
+        raise ValueError("egress gateway URL cannot be empty")
+    if not token.strip():
+        raise ValueError("egress gateway token cannot be empty")
+    return GatewayOpener(gateway_url, token, timeout=timeout)
+
+
 def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:
     """Build an opener with optional HTTP(S)/SOCKS5 routing and cookie persistence."""
     handlers: list[Any] = [_NoRedirect()]
@@ -136,6 +235,8 @@ def build_http_opener(proxy_url: str | None = None) -> Callable[..., Any]:
             )
     handlers.append(HTTPCookieProcessor(CookieJar()))
     return build_opener(*handlers).open
+
+
 
 
 def _retry_after(headers: Any) -> float | None:

@@ -12,7 +12,7 @@ from .intelligence import ShoppingIntelligence, ShoppingPolicy
 from .config import Settings
 from .digikala import DigikalaAdapter
 from .snappshop import SnappShopAdapter
-from .transport import build_http_opener
+from .transport import build_gateway_opener, build_http_opener
 
 mcp = FastMCP(
     "DigiSnap-MCP",
@@ -20,8 +20,16 @@ mcp = FastMCP(
     port=int(os.getenv("PORT", os.getenv("FASTMCP_PORT", os.getenv("MCP_PORT", "8000")))),
 )
 registry = AdapterRegistry()
+upstream_gateway = os.getenv("UPSTREAM_EGRESS_GATEWAY", "").strip()
+upstream_gateway_token = os.getenv("UPSTREAM_EGRESS_TOKEN", "").strip()
 upstream_proxy = os.getenv("UPSTREAM_HTTP_PROXY")
-upstream_opener = build_http_opener(upstream_proxy)
+
+if upstream_gateway:
+    if not upstream_gateway_token:
+        raise RuntimeError("UPSTREAM_EGRESS_TOKEN is required when UPSTREAM_EGRESS_GATEWAY is set")
+    upstream_opener = build_gateway_opener(upstream_gateway, upstream_gateway_token)
+else:
+    upstream_opener = build_http_opener(upstream_proxy)
 registry.register(DigikalaAdapter(opener=upstream_opener))
 registry.register(SnappShopAdapter(opener=upstream_opener))
 comparison = ComparisonEngine()
