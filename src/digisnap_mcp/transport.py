@@ -19,6 +19,7 @@ from urllib.request import (
     ProxyHandler,
     Request,
     build_opener,
+    urlopen,
 )
 
 import socks
